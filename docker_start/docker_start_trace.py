@@ -2,6 +2,7 @@ from bcc import BPF
 from time import sleep
 import subprocess
 import sys
+import json
 
 if len(sys.argv) == 2:
     target = sys.argv[1]
@@ -85,6 +86,23 @@ def call_event(b: BPF):
 
     return get_event
 
+def make_json():
+
+    write_seccomp = \
+        {"defaultAction": "SCMP_ACT_ERRNO",
+         "syscalls": [
+             {
+                 "names": [
+                     syscall_list
+                 ],
+                 "action": "SCMP_ACT_ALLOW"
+             }
+         ]
+         }
+
+    with open('./new.json', 'w') as f:
+        json.dump(write_seccomp, f, indent=4)
+
 
 b = BPF(text=bpf_text.replace("TARGET", target))
 
@@ -97,6 +115,6 @@ while 1:
     try:
         b.perf_buffer_poll()
     except KeyboardInterrupt:
-        print(syscall_list)
+        make_json()
         exit()
         break
