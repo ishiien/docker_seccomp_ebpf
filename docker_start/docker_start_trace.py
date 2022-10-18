@@ -87,21 +87,24 @@ def call_event(b: BPF):
     return get_event
 
 def make_json():
-
     write_seccomp = \
-        {"defaultAction": "SCMP_ACT_ERRNO",
-         "syscalls": [
-             {
-                 "names": [
-                     syscall_list
-                 ],
-                 "action": "SCMP_ACT_ALLOW"
-             }
-         ]
-         }
+        {
+            "defaultAction": "SCMP_ACT_ERRNO",
+            "syscalls": [
+                {
+                    "names":
+                        syscall_list,
+                    "action": "SCMP_ACT_ALLOW"
+                }
+            ]
 
-    with open('./new.json', 'w') as f:
-        json.dump(write_seccomp, f, indent=4)
+        }
+
+    with open("./seccomp.json","w") as file:
+        json.dump(write_seccomp,file,indent=4)
+
+    file.close()
+    return 0
 
 
 b = BPF(text=bpf_text.replace("TARGET", target))
@@ -109,7 +112,6 @@ b = BPF(text=bpf_text.replace("TARGET", target))
 b["events"].open_perf_buffer(call_event(b))
 
 print("exec syscall trace start")
-print("%-6s %-16s" % ("PROC_ID", "SYSCALL_NAME"))
 
 while 1:
     try:
@@ -117,4 +119,4 @@ while 1:
     except KeyboardInterrupt:
         make_json()
         exit()
-        break
+
