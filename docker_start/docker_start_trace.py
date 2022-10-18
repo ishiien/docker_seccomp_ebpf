@@ -64,24 +64,31 @@ def out_name(number):
         return str(number)
 
 
-def get_print_event(b: BPF):
-    def print_event(cpu, data, size):
+def is_odd(s):
+    return s == target
+
+syscall_list = []
+
+def call_event(b: BPF):
+    def get_event(cpu, data, size):
         event = b["events"].event(data)
         try:
             with open("/proc/%d/cgroup" % event.pid) as file:
                 file_read = file.read().find("/docker/93089fe59db2a56c5c205d8f683fa37e6b64c0e83148a56ccd02d50584227f7a")
             if file_read != -1:
-                print("%6d %-16s" % (event.pid, out_name(event.syscall_number)))
+                syscall_judged = out_name(event.syscall_number)
+                if syscall_judged not in syscall_list:
+                    syscall_list.append(syscall_judged)
                 file.close()
         except:
             return 1
 
-    return print_event
+    return get_event
 
 
 b = BPF(text=bpf_text.replace("TARGET", target))
 
-b["events"].open_perf_buffer(get_print_event(b))
+b["events"].open_perf_buffer(call_event(b))
 
 print("exec syscall trace start")
 print("%-6s %-16s" % ("PROC_ID", "SYSCALL_NAME"))
@@ -90,5 +97,6 @@ while 1:
     try:
         b.perf_buffer_poll()
     except KeyboardInterrupt:
+        print(syscall_list)
         exit()
         break
