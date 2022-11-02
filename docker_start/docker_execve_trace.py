@@ -28,7 +28,7 @@ bpf_text = """
     
     BPF_PERF_OUTPUT(events);
     
-    static inline bool fileter(char *str){
+    static inline bool filter(char *str){
         char needle[] = "TARGET";
         char target[sizeof(needle)];
         bpf_probe_read_kernel(&target,sizeof(needle),str);
@@ -49,8 +49,13 @@ bpf_text = """
         struct key_t key = {0};
         key.pid = bpf_get_current_pid_tgid();
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+        struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
         bpf_get_current_comm(&key.comm,sizeof(key.comm));
         bpf_probe_read_user(key.argv,sizeof(key.argv),(void *)filename);
+        
+        if(!filter(uns->name.nodename)){
+            return 0;
+        }
         
         events.perf_submit(ctx,&key,sizeof(struct key_t));
         

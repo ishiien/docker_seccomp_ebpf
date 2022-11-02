@@ -1,73 +1,71 @@
 from bcc import BPF
 from time import sleep
-import subprocess
 import sys
+import subprocess
 import json
 
 if len(sys.argv) == 2:
     target = sys.argv[1]
 else:
-    print("Container id is not set")
+    print("Specify the argument")
     exit(1)
+
 
 bpf_text = """
     #include<linux/sched.h>
     #include<linux/nsproxy.h>
     #include<linux/ns_common.h>
-    #include<linux/utsname.h>    
-
-    struct key_t {
+    #include<linux/utsname.h>
+    
+    struct data_t {
         u32 pid;
-        u64 syscall_number;
+        u32 syscall_number;
     };
-
+    
     BPF_PERF_OUTPUT(events);
-
-     static inline bool filter(char *str){
-        char needle[] = "TARGET";
-        char target[sizeof(needle)];
-        bpf_probe_read_kernel(&target,sizeof(needle),str);
-
-        for (int i = 0; i < sizeof(needle); ++i){
-            if (target[i] != needle[i])
+    
+    static inline bool filter(char *str){
+        char judge[] = "TARGET";
+        char target[sizeof(judge)];
+        bpf_probe_read_kernel(&target,sizeof(judge),str);
+        
+        for (int i = 0; i < sizeof(judge); ++i){
+            if (target[i] != judge[i])
                 return false;
-        }
+        } 
+        
         return true;
     }
-
-
-
+    
     TRACEPOINT_PROBE(raw_syscalls,sys_enter){
-
-        struct key_t key = {0};
-        key.pid = bpf_get_current_pid_tgid();
-        key.syscall_number = args->id;
+        struct data_t data = {0};
+        data.pid = bpf_get_current_pid_tgid();
+        data.syscall_number = args->id;
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
         if(!filter(uns->name.nodename)){
             return 0;
         }
-
-        events.perf_submit(args, &key, sizeof(key));
-
+        
+        events.perf_submit(args, &data,sizeof(data));
+        
         return 0;
     }
 
-
 """
 
+syscall_list = []
 
 def out_name(number):
     try:
-        s = subprocess.run(['ausyscall', str(number)], stdout=subprocess.PIPE).stdout
+        s = subprocess.run(['ausyscall',str(number)],stdout = subprocess.PIPE).stdout
         return s.decode('UTF-8').rstrip()
     except:
         return str(number)
 
-syscall_list = []
 
-def call_event(b: BPF):
-    def get_event(cpu, data, size):
+def call_event(b:BPF):
+    def get_event(cpu,data,size):
         event = b["events"].event(data)
         try:
             with open("/proc/%d/cgroup" % event.pid) as file:
@@ -86,7 +84,7 @@ def make_json():
     write_seccomp = \
         {
             "defaultAction": "SCMP_ACT_ERRNO",
-            "syscalls": [
+            "syscalls":[
                 {
                     "names":
                         syscall_list,
@@ -96,18 +94,18 @@ def make_json():
 
         }
 
-    with open("./seccomp.json","w") as file:
-        json.dump(write_seccomp,file,indent=4)
+    with open("./process.json","w") as proc_file:
+        json.dump(write_seccomp,proc_file,indent=4)
 
-    file.close()
+    proc_file.close()
     return 0
 
 
-b = BPF(text=bpf_text.replace("TARGET", target))
+b = BPF(text=bpf_text.replace("TARGET",target))
 
 b["events"].open_perf_buffer(call_event(b))
 
-print("exec syscall trace start")
+print("docker process syscall trace now")
 
 while 1:
     try:
