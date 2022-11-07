@@ -2,13 +2,14 @@ import sys
 
 from bcc import BPF
 from bcc.utils import printb
+from processes import process_trace
 
 
-if len(sys.argv) == 2:
-    target = sys.argv[1]
-else :
-    print("container id is not set")
-    exit(1)
+#if len(sys.argv) == 2:
+#    target = sys.argv[1]
+#else :
+#    print("container id is not set")
+#    exit(1)
 
 
 bpf_text = """
@@ -68,24 +69,31 @@ def  get_print_event(b: BPF):
     def print_event(cpu,data,size):
         event = b["events"].event(data)
         printb(b"%6d %-16s %-16s" % (event.pid,event.comm,event.argv))
+        process_trace.proc_syscall_trace(container_name,event.pid)
 
     return print_event
 
 
-b = BPF(text=bpf_text.replace("TARGET",target))
-b.attach_kprobe(event=b.get_syscall_fnname("execve"),fn_name="syscall__execve")
+def execve_syscall_trace(container_name):
+    target = container_name
+    b = BPF(text=bpf_text.replace("TARGET",target))
+    b.attach_kprobe(event=b.get_syscall_fnname("execve"),fn_name="syscall__execve")
 
-b["events"].open_perf_buffer(get_print_event(b))
+    b["events"].open_perf_buffer(get_print_event(b))
 
-print("execve syscal trace start")
-print("%-6s %-16s %-16s" % ("PID","COMM","ARG"))
+    print("execve syscal trace start")
+    print("%-6s %-16s %-16s" % ("PID","COMM","ARG"))
 
-while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        exit()
-        break
+
+    while 1:
+        try:
+            b.perf_buffer_poll()
+        except KeyboardInterrupt:
+            # You should decide the finish
+            exit()
+            break
+
+
 
 
 

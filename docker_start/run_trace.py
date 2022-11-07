@@ -3,12 +3,15 @@ from time import sleep
 import subprocess
 import sys
 import json
+import docker
 
-if len(sys.argv) == 2:
-    target = sys.argv[1]
-else:
-    print("Container id is not set")
-    exit(1)
+#def check_args():
+#    if len(sys.argv) == 2:
+#        target = sys.argv[1]
+#        return target
+#    else:
+#        print("Container id is not set")
+#        exit(1)
 
 bpf_text = """
     #include<linux/sched.h>
@@ -102,17 +105,21 @@ def make_json():
     file.close()
     return 0
 
+def run_tracer(container_name):
+    target = container_name
+    b = BPF(text=bpf_text.replace("TARGET", target))
+    b["events"].open_perf_buffer(call_event(b))
+    print("exec syscall trace start")
 
-b = BPF(text=bpf_text.replace("TARGET", target))
-
-b["events"].open_perf_buffer(call_event(b))
-
-print("exec syscall trace start")
-
-while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        make_json()
-        exit()
+    while 1:
+        try:
+            b.perf_buffer_poll()
+            client = docker.from_env()
+            for containers in client.containers.list():
+                container_id = containers.attrs['Id'][0:12]
+                if container_id == container_name:
+                    make_json()
+                    break
+        except KeyboardInterrupt:
+            exit()
 

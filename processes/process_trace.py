@@ -4,11 +4,12 @@ import sys
 import subprocess
 import json
 
-if len(sys.argv) == 2:
-    target = sys.argv[1]
-else:
-    print("Specify the argument")
-    exit(1)
+
+#if len(sys.argv) == 2:
+#    target = sys.argv[1]
+#else:
+#    print("Specify the argument")
+#    exit(1)
 
 
 bpf_text = """
@@ -33,7 +34,6 @@ bpf_text = """
             if (target[i] != judge[i])
                 return false;
         } 
-        
         return true;
     }
     
@@ -64,16 +64,17 @@ def out_name(number):
         return str(number)
 
 
-def call_event(b:BPF):
+def call_event(b:BPF,proc_id):
     def get_event(cpu,data,size):
         event = b["events"].event(data)
         try:
             with open("/proc/%d/cgroup" % event.pid) as file:
                 file_read = file.read().find("/docker/93089fe59db2a56c5c205d8f683fa37e6b64c0e83148a56ccd02d50584227f7a")
             if file_read != -1:
-                syscall_judged = out_name(event.syscall_number)
-                if syscall_judged not in syscall_list:
-                    syscall_list.append(syscall_judged)
+                if proc_id == event.pid:
+                    syscall_judged = out_name(event.syscall_number)
+                    if syscall_judged not in syscall_list:
+                        syscall_list.append(syscall_judged)
                 file.close()
         except:
             return 1
@@ -100,17 +101,17 @@ def make_json():
     proc_file.close()
     return 0
 
+def proc_syscall_trace(container_name,proc_id):
+    target = container_name
+    b = BPF(text=bpf_text.replace("TARGET",target))
+    b["events"].open_perf_buffer(call_event(b,proc_id))
 
-b = BPF(text=bpf_text.replace("TARGET",target))
+    print("docker process syscall trace now")
 
-b["events"].open_perf_buffer(call_event(b))
-
-print("docker process syscall trace now")
-
-while 1:
-    try:
-        b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        make_json()
-        exit()
+    while 1:
+        try:
+            b.perf_buffer_poll()
+        except KeyboardInterrupt:
+            make_json()
+            exit()
 
