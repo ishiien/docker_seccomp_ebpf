@@ -1,8 +1,9 @@
 from dock import dockerfile
-from docker_start import run_trace,execve_trace
-#from processes import process_trace
-import docker
+from docker_start import run_trace
+from docker_proc import execve_trace
 
+# exec_list is Predefined commands and programs
+# container_list is list of containers to be traced
 exec_list = []
 container_list = []
 
@@ -16,7 +17,7 @@ if not container_list:
 # start syscall trace
 for container in container_list:
     container_name = container.replace("container_name:","").strip()
-    # contaienr run syscall trace
+    # container run syscall trace
     #run_trace.run_tracer(container_name)
 
     #You should know when container 's makeing is end
