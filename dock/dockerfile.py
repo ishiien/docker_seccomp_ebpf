@@ -1,4 +1,5 @@
 import yaml
+import subprocess
 
 
 
@@ -21,4 +22,8 @@ def check_docker_compose(container_list):
                 container_list.append(dockerf)
 
         return container_list
+
+def exec_dock_directory():
+    s = subprocess.run("docker-compose up --build")
+
 

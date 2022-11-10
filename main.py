@@ -17,19 +17,16 @@ if not container_list:
 # start syscall trace
 for container in container_list:
     container_name = container.replace("container_name:","").strip()
+
+    # docker-compose & docker file exec
+    dockerfile.exec_dock_directory()
+
     # container run syscall trace
-    #run_trace.run_tracer(container_name)
+    run_trace.run_tracer(container_name)
 
-    #You should know when container 's makeing is end
+    # if container is running , next section # trace syscall when user enter the container
 
-    # trace syscall when user enter the container
-
-    # exec trace
+    # exec trace & proc trace
     execve_trace.execve_syscall_trace(container_name)
 
-    # proc trace
-    #process_trace.proc_syscall_trace(container_name)
-
-    # eBPF version
-
-    # ptrace version
+    # make production container
