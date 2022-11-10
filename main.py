@@ -24,7 +24,6 @@ for container in container_list:
 
     # trace syscall when user enter the container
 
-
     # exec trace
     execve_trace.execve_syscall_trace(container_name)
 
