@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/user.h>
 #include <errno.h>
+#include <sys/syscall.h>
+#include <string.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/user.h>
-#include <sys/signal.h>
-#include <sys/wait.h>
-#include <sys/ptrace.h>
 #include <sys/fcntl.h>
 #include <syscall.h>
+
 
 void die (const char *msg)
 {
@@ -35,33 +36,25 @@ int syscall_number_to_string(int syscall_number){
 
 int main(int argc, char *argv[])
 {
-  int pid, result;
+  int status;
+  int pid;
   struct user_regs_struct regs;
-  const char *prog;
 
   if (argc < 2) {
-    printf("usage: \n%s PROG [ARG]\n", argv[0]);
-    return 0;
+    printf("please set pid\n");
+    exit(1);
   }
 
-  prog = argv[1];
+  pid = atoi(argv[1]);
+  printf("attach to %d\n", pid);
 
-  switch( (pid = fork()) ) {
-    case -1:  die("Failed fork");
-    case 0:
-              // 親プロセスにトレースさせる
-              ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-              result = execvp(prog, &argv[1]);
-              if (result) {
-                die("execvp");
-                return result;
-              }
-              return 0;
+  if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) < 0) {
+    perror("failed to attach");
+    exit(1);
   }
 
-  while(1) {
+  while (1) {
     int st;
-    // 子プロセスを再開する
     ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
     if (waitpid(pid, &st, __WALL) == -1) {
       break;
@@ -77,12 +70,10 @@ int main(int argc, char *argv[])
       continue;
     }
 
-    //char syscall_string[30];
     int syscall_string;
-    char *sys_str;
     syscall_string = syscall_number_to_string(regs.orig_rax);
 
-    //printf("%d\n", syscall_string);
   }
+
   return 0;
 }
