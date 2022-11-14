@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -13,51 +12,36 @@
 #include <sys/fcntl.h>
 #include <syscall.h>
 
+
 void die (const char *msg)
 {
   perror(msg);
   exit(errno);
 }
 
-int syscall_number_to_string(int syscall_number){
-    char arg_number[20];
-    char command[20] = "ausyscall";
-    char space[2] = " ";
-    int result;
+void attack()
+{
+  int rc;
 
-    sprintf(arg_number,"%d",syscall_number);
-    strcat(command,space);
-    strcat(command,arg_number);
-    result = system(command);
-    printf("%d",result);
-    return result;
+  // mkdir("dir", 0777);
+  syscall(SYS_getpid, SYS_mkdir, "dir", 0777); // 引数部分に SYS_mkdir とその引数を与えておく
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-  int pid, result;
+  int pid;
   struct user_regs_struct regs;
-  const char *prog;
-
-  if (argc < 2) {
-    printf("usage: \n%s PROG [ARG]\n", argv[0]);
-    return 0;
-  }
-
-  prog = argv[1];
-
   switch( (pid = fork()) ) {
     case -1:  die("Failed fork");
     case 0:
               // 親プロセスにトレースさせる
               ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-              result = execvp(prog, &argv[1]);
-              if (result) {
-                die("execvp");
-                return result;
-              }
+              kill(getpid(), SIGSTOP);
+              attack();
               return 0;
   }
+
+  waitpid(pid, 0, 0);
 
   while(1) {
     int st;
@@ -72,17 +56,24 @@ int main(int argc, char *argv[])
     }
 
     ptrace(PTRACE_GETREGS, pid, NULL, &regs);
+    printf("orig_rax = %lld\n", regs.orig_rax);
 
-    if (regs.rax == - ENOSYS) {
+    // syscall-enter-stop であればスキップ
+    if (regs.rax != -ENOSYS) {
       continue;
     }
 
-    //char syscall_string[30];
-    int syscall_string;
-    char *sys_str;
-    syscall_string = syscall_number_to_string(regs.orig_rax);
-
-    //printf("%d\n", syscall_string);
+    // レジスタの内容を変更してシステムコールを変更する
+    if (regs.orig_rax == SYS_getpid) {
+      regs.orig_rax = regs.rdi;
+      regs.rdi = regs.rsi;
+      regs.rsi = regs.rdx;
+      regs.rdx = regs.r10;
+      regs.r10 = regs.r8;
+      regs.r8 = regs.r9;
+      regs.r9 = 0;
+      ptrace(PTRACE_SETREGS, pid, NULL, &regs);
+    }
   }
   return 0;
 }
