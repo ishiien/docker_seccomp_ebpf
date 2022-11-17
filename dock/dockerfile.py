@@ -4,7 +4,7 @@ import subprocess
 
 
 def check_docker_file(exec_list):
-    with open("./dock/Dockerfile") as file:
+    with open("./dockerfile_test/Dockerfile") as file:
         dockerfs = file.readlines()
         for dockerf in dockerfs:
             if "CMD" in dockerf:
@@ -15,7 +15,7 @@ def check_docker_file(exec_list):
         return exec_list
 
 def check_docker_compose(container_list):
-    with open("./dock/docker-compose.yml") as file:
+    with open("./dockerfile_test/docker-compose.yml") as file:
         dockerfs = file.readlines()
         for dockerf in dockerfs:
             if "container_name" in dockerf:

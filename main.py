@@ -10,9 +10,13 @@ container_list = []
 dockerfile.check_docker_file(exec_list)
 dockerfile.check_docker_compose(container_list)
 
+# container id change container name
+
 if not container_list:
     print("container id is not set")
     exit(1)
+
+
 
 # start syscall trace
 for container in container_list:

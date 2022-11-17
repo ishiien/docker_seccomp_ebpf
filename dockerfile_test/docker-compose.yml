@@ -2,6 +2,6 @@ version: '3'
 
 services:
   php:
-    container_name: php_test
+    container_name: nginx_tester
     build: .
 

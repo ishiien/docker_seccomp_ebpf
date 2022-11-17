@@ -3,15 +3,7 @@ from time import sleep
 import subprocess
 import sys
 import json
-import docker
 
-#def check_args():
-#    if len(sys.argv) == 2:
-#        target = sys.argv[1]
-#        return target
-#    else:
-#        print("Container id is not set")
-#        exit(1)
 
 bpf_text = """
     #include<linux/sched.h>
@@ -59,7 +51,6 @@ bpf_text = """
 
 """
 
-
 def out_name(number):
     try:
         s = subprocess.run(['ausyscall', str(number)], stdout=subprocess.PIPE).stdout
@@ -72,17 +63,9 @@ syscall_list = []
 def call_event(b: BPF):
     def get_event(cpu, data, size):
         event = b["events"].event(data)
-        try:
-            with open("/proc/%d/cgroup" % event.pid) as file:
-                file_read = file.read().find("/docker/93089fe59db2a56c5c205d8f683fa37e6b64c0e83148a56ccd02d50584227f7a")
-            if file_read != -1:
-                syscall_judged = out_name(event.syscall_number)
-                if syscall_judged not in syscall_list:
-                    syscall_list.append(syscall_judged)
-                file.close()
-        except:
-            return 1
-
+        syscall_judged = out_name(event.syscall_number)
+        if syscall_judged not in syscall_list:
+            syscall_list.append(syscall_judged)
     return get_event
 
 def make_json():
@@ -105,8 +88,8 @@ def make_json():
     file.close()
     return 0
 
-def run_tracer(container_name):
-    target = container_name
+def run_tracer(container_id):
+    target = container_id
     b = BPF(text=bpf_text.replace("TARGET", target))
     b["events"].open_perf_buffer(call_event(b))
     print("exec syscall trace start")
@@ -114,12 +97,8 @@ def run_tracer(container_name):
     while 1:
         try:
             b.perf_buffer_poll()
-            client = docker.from_env()
-            for containers in client.containers.list():
-                container_id = containers.attrs['Id'][0:12]
-                if container_id == container_name:
-                    make_json()
-                    break
+            make_json()
+            break
         except KeyboardInterrupt:
             exit()
 
