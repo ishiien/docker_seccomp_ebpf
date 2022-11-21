@@ -1,16 +1,15 @@
 import docker
 
-def check_container_name(name):
-    client = docker.from_env()
-    for c in client.containers.list(all=True):
-        container_id = c.attrs['Id']
-        container_name = c.attrs['Name']
-        container_name = container_name.replace("/","").strip()
-        if container_name == name:
-            print(container_name)
-            return container_id[0:12]
+container_id_list = []
 
-    returener_container_id = 0
-    return returener_container_id
+def check_container_name(target_name):
+    client = docker.from_env()
+    for c in client.containers.list(all=True, filters={"name": target_name}):
+        container_id = c.attrs['Id']
+        if container_id != 0:
+            return container_id
+
+    returner = 0
+    return returner
 
 

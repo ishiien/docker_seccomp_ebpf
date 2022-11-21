@@ -1,7 +1,0 @@
-version: '3'
-
-services:
-  nginx:
-    container_name: 93089fe59db2
-    build: .
-
