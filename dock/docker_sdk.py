@@ -2,14 +2,15 @@ import docker
 
 container_id_list = []
 
-def check_container_name(target_name):
+def ContainerName_to_ContainerId(container_name):
     client = docker.from_env()
-    for c in client.containers.list(all=True, filters={"name": target_name}):
-        container_id = c.attrs['Id']
-        if container_id != 0:
-            return container_id
+    while 1:
+        try:
+            for c in client.containers.list(all=True,filters={"name": container_name}):
+                container_id = c.attrs['Id']
+                return container_id[0:12]
+        except Exception:
+            continue
 
-    returner = 0
-    return returner
 
 

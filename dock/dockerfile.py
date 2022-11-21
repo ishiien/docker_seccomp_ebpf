@@ -23,7 +23,10 @@ def check_docker_compose(container_list):
 
         return container_list
 
-def exec_dock_directory():
-    s = subprocess.run("docker-compose up --build")
+def exec_dockerfile_test():
+    cmd = ("docker-compose","up","--build")
+    s = subprocess.run(cmd,cwd="./dockerfile_test")
 
-
+def exec_dockerfile_production():
+    cmd = ("docker-compose", "up", "--build")
+    s = subprocess.run(cmd, cwd="./dockerfile_production")
