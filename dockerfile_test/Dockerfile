@@ -1,7 +1,7 @@
-FROM php:latest
+FROM nginx:latest
 
 RUN apt-get update
+RUN apt-get install -y iputils-ping net-tools
 
-WORKDIR /var/www
-COPY ./index.php /var/www
-CMD ["php","index.php"]
+CMD ["ping","localhost","-c","3"]
+CMD ["mkdir","make_directory_docker"]
