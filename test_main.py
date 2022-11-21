@@ -17,24 +17,13 @@ if not container_list:
     exit(1)
 
 # exec test_dockerfile
-dockerfile.exec_dock_directory()
+dockerfile.exec_dockerfile_test()
 
-container_id = 0
-while container_id == 0:
-    for name in container_list:
-        container_name = name.replace("container_name:", "").strip()
-        container_id = docker_sdk.ContainerName_to_ContainerId(container_name)
-        if container_id != 0:
-            break
-
-# start syscall trace container
-run_trace.run_tracer(container_id)
-
-# if container is running ,trace syscall when user enter the container
-
-
+# asynchronous processing
 
 # exec production_dockerfile
+dockerfile.exec_dockerfile_production()
+
 
 # start syscall trace containers
 #for container in container_list:
