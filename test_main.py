@@ -16,21 +16,28 @@ if not container_list:
     print("container id is not set")
     exit(1)
 
+# exec test_dockerfile
+dockerfile.exec_dock_directory()
+
 container_id = 0
 while container_id == 0:
     for name in container_list:
-        name = name.replace("container_name:", "").strip()
-        container_id = docker_sdk.check_container_name(name)
+        container_name = name.replace("container_name:", "").strip()
+        container_id = docker_sdk.ContainerName_to_ContainerId(container_name)
+        if container_id != 0:
+            break
 
-print(container_id)
+# start syscall trace container
+run_trace.run_tracer(container_id)
+
+# if container is running ,trace syscall when user enter the container
 
 
 
-#run_trace.run_tracer(container_id)
+# exec production_dockerfile
 
-# start syscall trace
+# start syscall trace containers
 #for container in container_list:
-#    container_name = container.replace("container_name:","").strip()
 #
 #    # docker-compose & docker file exec
 #    dockerfile.exec_dock_directory()

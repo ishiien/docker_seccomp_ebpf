@@ -30,10 +30,7 @@ bpf_text = """
         return true;
     }
 
-
-
     TRACEPOINT_PROBE(raw_syscalls,sys_enter){
-
         struct key_t key = {0};
         key.pid = bpf_get_current_pid_tgid();
         key.syscall_number = args->id;
@@ -44,7 +41,6 @@ bpf_text = """
         }
 
         events.perf_submit(args, &key, sizeof(key));
-
         return 0;
     }
 
@@ -97,8 +93,6 @@ def run_tracer(container_id):
     while 1:
         try:
             b.perf_buffer_poll()
-            make_json()
-            break
         except KeyboardInterrupt:
+            make_json()
             exit()
-
