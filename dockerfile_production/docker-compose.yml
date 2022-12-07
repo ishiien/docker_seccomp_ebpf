@@ -4,4 +4,7 @@ services:
   php:
     container_name: php_test
     build: .
+    tty: true
+    security_opt:
+      - seccomp:seccomp.json
 

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+import ctypes
+
 from bcc import BPF
 from bcc.utils import printb
 import json
-
+from ctypes import *
 
 # このファイルは，権限についての情報収集を行うためのものである．
 
@@ -20,10 +22,22 @@ bpf_text = """
 struct data_t {
     u32 pid;
     char comm[TASK_COMM_LEN];
+    unsigned int uid;
 };
 
 BPF_PERF_OUTPUT(events);
 
+static inline bool filter(char *str){
+   char judge[] = "TARGET";
+   char target[sizeof(judge)];
+   bpf_probe_read_kernel(&target,sizeof(judge),str);
+
+   for (int i = 0; i < sizeof(judge); ++i){
+       if (target[i] != judge[i])
+           return false;
+   } 
+   return true;
+}
 
 int syscall__execve(struct pt_regs *ctx,
         const char __user *filename,
@@ -38,65 +52,41 @@ int syscall__execve(struct pt_regs *ctx,
         struct user_namespace *user_ns = (struct user_namespace *)task->ptracer_cred->user_ns;
         struct cred *credp = (struct cred *)task->cred;
         
+        if(!filter(uns->name.nodename)){
+            return 0;
+        }
+        
         bpf_get_current_comm(&data.comm,sizeof(data.comm));
         
-        uid_t euid_v = credp->euid.val;
-        u32 value = user_ns->uid_map.reverse->count;
-        
-        bpf_trace_printk("%ld %ld",euid_v,value);
-        
+        data.uid = credp->euid.val;        
         events.perf_submit(ctx,&data,sizeof(struct data_t));
         
         return 0;
     }
 
 """
+ct_mapping = {
+        'uid_t' : ctypes.c_uint,
+    }
+def get_print_event(b:BPF):
+    def print_event(cpu,data,size):
+        event = b["events"].event(data)
+        print("%d %d" % (event.pid,event.uid))
+    return print_event
 
-#def get_print_event(b:BPF):
-#    def print_event(cpu,data,size):
-#        event = b["events"].event(data)
-#        #make_json(event.uid)
-#
-#    return print_event
-
-#def make_json(data):
-#    write_seccomp = \
-#        {
-#            "defaultAction": "SCMP_ACT_ERRNO",
-#            "syscalls": [
-#                {
-#                    "data":
-#                        data,
-#                    "action": "SCMP_ACT_ALLOW"
-#                }
-#            ]
-#
-#        }
-#
-#    with open("./authority.json","w") as file:
-#        json.dump(write_seccomp,file,indent=4)
-#
-#    file.close()
-#    return 0
-#
-
-
-
-
-def authoric_struct_trace():
-    b = BPF(text = bpf_text)
+def authoric_struct_trace(container_id):
+    target = container_id
+    b = BPF(text = bpf_text.replace("TARGET",target))
     b.attach_kprobe(event=b.get_syscall_fnname("execve"),fn_name="syscall__execve")
 
-    #b["events"].open_perf_buffer(get_print_event(b))
+    b["events"].open_perf_buffer(get_print_event(b))
 
     print("print authoric information")
 
-
     while 1:
         try:
-            #b.perf_buffer_poll()
-            b.trace_print()
+            b.perf_buffer_poll()
         except:
             exit()
 
-authoric_struct_trace()
+authoric_struct_trace("a9fe77ca12f5")
