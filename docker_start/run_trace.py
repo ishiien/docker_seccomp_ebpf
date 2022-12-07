@@ -1,8 +1,11 @@
 from bcc import BPF
 from time import sleep
+import time
 import subprocess
 import sys
 import json
+from dock import dockerfile
+from concurrent.futures import ProcessPoolExecutor
 
 
 bpf_text = """
@@ -84,15 +87,20 @@ def make_json():
     file.close()
     return 0
 
-def run_tracer(container_id):
-    target = container_id
-    b = BPF(text=bpf_text.replace("TARGET", target))
-    b["events"].open_perf_buffer(call_event(b))
-    print("exec syscall trace start")
-
+def perf_buffer(b):
     while 1:
         try:
             b.perf_buffer_poll()
         except KeyboardInterrupt:
             make_json()
             exit()
+
+def run_tracer(container_id):
+    target = container_id
+    b = BPF(text=bpf_text.replace("TARGET", target))
+    b["events"].open_perf_buffer(call_event(b))
+    print("start container syscall trace now")
+    with ProcessPoolExecutor(2) as execer:
+        execer.submit(dockerfile.Start_Container_Test())
+        execer.submit(perf_buffer(b))
+
