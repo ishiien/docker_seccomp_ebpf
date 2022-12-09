@@ -5,12 +5,12 @@ import subprocess
 
 # container_list is list of containers to be traced
 container_list = []
-dockerfile.check_docker_compose(container_list)
+dockerfile.Check_Docker_Compose(container_list)
 if not container_list:
     print("container id is not set")
     exit(1)
 
-
+#Create Docker container
 print("container create now")
 dockerfile.Create_Container_Test()
 
@@ -24,17 +24,13 @@ while container_id == 0:
             break
 print("contaier_id get now")
 
-# Start syscall trace container and Create Docker container
+# Start syscall trace container and Enter the container
 print("container trace start")
 run_trace.run_tracer(container_id)
-
-#if container is running ,trace syscall when user enter the container
-print("please enter 'exit'")
-dockerfile.Enter_Container_Test()
 
 a = subprocess.run(["mv","./seccomp.json","./dockerfile_production"])
 
 #exec production_dockerfile
-dockerfile.exec_dockerfile_production()
+dockerfile.Exec_Dockerfile_Production()
 
 
