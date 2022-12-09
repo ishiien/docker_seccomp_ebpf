@@ -29,9 +29,10 @@ print("container trace start")
 run_trace.run_tracer(container_id)
 
 #if container is running ,trace syscall when user enter the container
-#print("please enter the container") # docker-compose exec -it servece_name
+print("please enter 'exit'")
+dockerfile.Enter_Container_Test()
 
-s = subprocess.run(["mv","./seccomp.json","./dockerfile_production"])
+a = subprocess.run(["mv","./seccomp.json","./dockerfile_production"])
 
 #exec production_dockerfile
 dockerfile.exec_dockerfile_production()
