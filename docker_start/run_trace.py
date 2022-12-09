@@ -4,7 +4,7 @@ import time
 import subprocess
 import sys
 import json
-from dock import dockerfile
+from dock import dockerfile,docker_sdk
 from concurrent.futures import ProcessPoolExecutor
 
 
@@ -87,13 +87,18 @@ def make_json():
     file.close()
     return 0
 
-def perf_buffer(b):
+def perf_buffer(b,container_id):
     while 1:
         try:
             b.perf_buffer_poll()
         except KeyboardInterrupt:
             make_json()
+            print(len(syscall_list))
             exit()
+        if docker_sdk.Container_Running_Inform(container_id) == True:
+            make_json()
+            print(len(syscall_list))
+            return 0
 
 def run_tracer(container_id):
     target = container_id
@@ -102,5 +107,6 @@ def run_tracer(container_id):
     print("start container syscall trace now")
     with ProcessPoolExecutor(2) as execer:
         execer.submit(dockerfile.Start_Container_Test())
-        execer.submit(perf_buffer(b))
+        execer.submit(perf_buffer(b,container_id))
+
 
