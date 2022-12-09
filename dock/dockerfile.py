@@ -2,7 +2,7 @@ import yaml
 import subprocess
 import time
 
-def check_docker_compose(container_list):
+def Check_Docker_Compose(container_list):
     with open("./dockerfile_test/docker-compose.yml") as file:
         dockerfs = file.readlines()
         for dockerf in dockerfs:
@@ -17,15 +17,21 @@ def Create_Container_Test():
     s = subprocess.run(cmd,cwd="./dockerfile_test")
 
 def Start_Container_Test():
-    # Start Container
+    # Start Container and Exec container
     print("start container")
     cmd = ("docker-compose","start")
     s = subprocess.run(cmd,cwd="./dockerfile_test")
+    Enter_Container_Test()
 
-def exec_dockerfile_production():
-    cmd = ("docker-compose", "up", "--build")
+def Exec_Dockerfile_Production():
+    cmd = ("docker-compose","up","--no-start")
     s = subprocess.run(cmd, cwd="./dockerfile_production")
+    cmd = ("docker-compose","start")
+    a = subprocess.run(cmd, cwd="./dockerfile_production")
 
 def Enter_Container_Test():
+    print("please enter 'exit'")
     cmd = ("docker-compose", "exec", "php", "/bin/bash")
     s = subprocess.run(cmd, cwd="./dockerfile_test")
+
+
