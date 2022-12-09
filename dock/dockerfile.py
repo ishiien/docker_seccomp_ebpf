@@ -25,3 +25,7 @@ def Start_Container_Test():
 def exec_dockerfile_production():
     cmd = ("docker-compose", "up", "--build")
     s = subprocess.run(cmd, cwd="./dockerfile_production")
+
+def Enter_Container_Test():
+    cmd = ("docker-compose", "exec", "php", "/bin/bash")
+    s = subprocess.run(cmd, cwd="./dockerfile_test")
