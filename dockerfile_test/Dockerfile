@@ -1,7 +1,7 @@
 FROM php:latest
 
 RUN apt-get update
-RUN apt-get install -y sudo
+RUN apt-get -y install iputils-ping net-tools
 
 WORKDIR /var/www
 COPY ./index.php /var/www
@@ -14,3 +14,5 @@ RUN groupadd -g ${GID} docker
 RUN useradd -u ${UID} -g ${GID} -s /bin/bash tester
 
 USER ${UID}
+
+CMD ["ping","-c","1","localhost"]

@@ -7,9 +7,18 @@ def Check_Docker_Compose(container_list):
         dockerfs = file.readlines()
         for dockerf in dockerfs:
             if "container_name" in dockerf:
-                container_list.append(dockerf)
-
+                container_name = dockerf.replace("container_name:", "").strip()
+                container_list.append(container_name)
         return container_list
+
+def Check_Docker_Compose_CMD(command_list):
+    with open("./dockerfile_test/Dockerfile") as file:
+        dockerfs = file.readlines()
+        for dockerf in dockerfs:
+            if "CMD" in dockerf:
+                command = dockerf.replace("CMD", "").strip()
+                command_list.append(command.replace(",", " ").replace('"', "").replace("[","").replace("]",""))
+        return command_list
 
 def Create_Container_Test():
     # Create Container Only
@@ -33,5 +42,3 @@ def Enter_Container_Test():
     print("please enter 'exit'")
     cmd = ("docker-compose", "exec", "php", "/bin/bash")
     s = subprocess.run(cmd, cwd="./dockerfile_test")
-
-

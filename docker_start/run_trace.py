@@ -6,6 +6,7 @@ import sys
 import json
 from dock import dockerfile,docker_sdk
 from concurrent.futures import ProcessPoolExecutor
+from docker_proc, import exec_proc
 
 
 bpf_text = """
@@ -100,13 +101,14 @@ def perf_buffer(b,container_id):
             print(len(syscall_list))
             return 0
 
-def run_tracer(container_id):
+def run_tracer(container_id,command_list):
     target = container_id
     b = BPF(text=bpf_text.replace("TARGET", target))
     b["events"].open_perf_buffer(call_event(b))
     print("start container syscall trace now")
-    with ProcessPoolExecutor(2) as execer:
+    with ProcessPoolExecutor(3) as execer:
         execer.submit(dockerfile.Start_Container_Test())
         execer.submit(perf_buffer(b,container_id))
+        exec_proc.execve_syscall_tracer(target,command_list)
 
 

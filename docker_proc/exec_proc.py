@@ -4,6 +4,7 @@ from bcc.utils import printb
 import subprocess
 import json
 from collections import defaultdict
+from dock import dockerfile
 
 bpf_text = """
     #include<linux/sched.h>
@@ -21,7 +22,7 @@ bpf_text = """
     };
 
 
-    BPF_PERF_OUTPUT(events);
+    BPF_PERF_OUTPUT(execve);
 
     static inline bool filter(char *str){
         char judge[] = "TARGET";
@@ -38,7 +39,7 @@ bpf_text = """
     static int __submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
     {
         bpf_probe_read_user(exec->fname, sizeof(exec->fname), ptr);
-        events.perf_submit(ctx, exec, sizeof(struct exec_t));
+        execve.perf_submit(ctx, exec, sizeof(struct exec_t));
         return 1;
     }
 
@@ -96,32 +97,33 @@ out:
             return 0;
         }
         
-        events.perf_submit(ctx, &exec, sizeof(exec));
+        execve.perf_submit(ctx, &exec, sizeof(exec));
 
         return 0;
     }
 """
 argv = defaultdict(list)
 
-def get_print_event(b: BPF):
+def get_print_event(b: BPF,command_list):
     def print_event(cpu, data, size):
-        event = b["events"].event(data)
+        event = b["execve"].event(data)
         if event.type == 0:
             argv[event.pid].append(event.fname)
         elif event.type == 1:
             fname_text = b' '.join(argv[event.pid])
-            print("%-6d %-16s %-16s" % (event.pid,event.comm,fname_text))
-
+            for command in command_list:
+                if fname_text.find(command) != -1:
+                    print("%-6d %-16s %-16s" % (event.pid,event.comm,fname_text))
     return print_event
 
 
-def execve_syscall_trace(container_name):
-    target = container_name
+def execve_syscall_tracer(container_id,command_list):
+    target = container_id
     arg = "10000"
     b = BPF(text=bpf_text.replace("TARGET", target).replace("MAXARG",arg))
     b.attach_kprobe(event=b.get_syscall_fnname("execve"), fn_name="syscall__execve")
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
-    b["events"].open_perf_buffer(get_print_event(b))
+    b["execve"].open_perf_buffer(get_print_event(b,command_list))
 
     print("execve syscal trace start")
     print("%-6s %-16s %-16s" % ("pid","comm","args"))
@@ -132,6 +134,8 @@ def execve_syscall_trace(container_name):
         except KeyboardInterrupt:
             exit()
 
-container = "93089fe59db2"
-execve_syscall_trace(container)
-
+commands_list = []
+container_id = "93089fe59db2"
+dockerfile.Check_Docker_Compose_CMD(commands_list)
+print(commands_list)
+execve_syscall_tracer(container_id,commands_list)
