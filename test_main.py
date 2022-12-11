@@ -1,4 +1,4 @@
-from dock import dockerfile
+from docker_sdk import dockerfile
 import sys
 from bcc import BPF
 from bcc.utils import printb

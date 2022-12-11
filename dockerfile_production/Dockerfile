@@ -1,7 +1,7 @@
 FROM php:latest
 
 RUN apt-get update
-RUN apt-get install -y sudo
+RUN apt-get -y install iputils-ping net-tools
 
 WORKDIR /var/www
 COPY ./index.php /var/www
