@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  php:
+    container_name: nginx_container
+    tty: true
+    build: .
+    ports:
+      - 8080:80

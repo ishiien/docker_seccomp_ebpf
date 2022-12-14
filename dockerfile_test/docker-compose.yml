@@ -1,4 +1,3 @@
-
 version: '3'
 
 services:
@@ -6,6 +5,3 @@ services:
     container_name: php_test
     tty: true
     build: .
-
-
-

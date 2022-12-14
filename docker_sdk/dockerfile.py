@@ -22,6 +22,8 @@ def Check_Docker_Compose_CMD(command_list):
 
 def Create_Container_Test():
     # Create Container Only
+    command = ("docker-compose","build","--no-cache")
+    a = subprocess.run(command,cwd='./dockerfile_test')
     cmd = ("docker-compose","up","--no-start")
     s = subprocess.run(cmd,cwd="./dockerfile_test")
 
@@ -33,10 +35,12 @@ def Start_Container_Test():
     Enter_Container_Test()
 
 def Exec_Dockerfile_Production():
+    command = ("docker-compose", "build", "--no-cache")
+    a = subprocess.run(command, cwd='./dockerfile_production')
     cmd = ("docker-compose","up","--no-start")
     s = subprocess.run(cmd, cwd="./dockerfile_production")
     cmd = ("docker-compose","start")
-    a = subprocess.run(cmd, cwd="./dockerfile_production")
+    c = subprocess.run(cmd, cwd="./dockerfile_production")
 
 def Enter_Container_Test():
     print("please enter 'exit'")

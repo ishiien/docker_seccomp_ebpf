@@ -140,7 +140,6 @@ def execve_syscall_tracer(container_id, command_list):
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
     b["execve"].open_perf_buffer(get_print_event(b, command_list))
     print("execve syscal trace start")
-    print("%-6s %-16s %-16s" % ("pid", "comm", "args"))
 
     with ProcessPoolExecutor(2) as execer:
         execer.submit(dockerfile.Start_Container_Test())
