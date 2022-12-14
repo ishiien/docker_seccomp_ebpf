@@ -1,9 +1,15 @@
 version: '3'
 
 services:
-  php:
+  nginx:
     container_name: nginx_container
     tty: true
     build: .
     ports:
       - 8080:80
+
+  php:
+    image: php:latest
+    container_name: php_container
+    tty: true
+
