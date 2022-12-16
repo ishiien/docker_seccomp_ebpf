@@ -7,7 +7,7 @@ import subprocess
 container_name_list = []
 command_list = []
 dockerfile.Check_Docker_Compose(container_name_list)
-dockerfile.Check_Docker_Compose_CMD(command_list)
+#dockerfile.Check_Docker_Compose_CMD(command_list)
 
 if not container_name_list:
     print("container id is not set")
@@ -29,8 +29,23 @@ while list_length > count_length:
             container_id_list.append(container_id)
             count_length = count_length + 1
 
-print(container_id_list)
+print("container trace start")
+container_count = 0
+for container_id in container_id_list:
+    container_name = container_name_list[container_count]
+    run_trace.run_tracer(container_id,container_name)
+    container_count = container_count + 1
+    print("container trace done","container_id: %s" % (container_id))
 
+## json find and move production
+for container_name in container_name_list:
+    main_cmd = "mv"
+    target_file = container_name + "." + "json"
+    target_dir = "./dockerfile_production"
+    a = subprocess.run([main_cmd,target_file,target_dir])
+
+dockerfile.Down_Dockerfile_Test()
+dockerfile.Exec_Dockerfile_Production()
 
 
 

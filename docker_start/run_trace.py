@@ -68,7 +68,7 @@ def call_event(b: BPF):
             syscall_list.append(syscall_judged)
     return get_event
 
-def make_json():
+def make_json(container_name):
     write_seccomp = \
         {
             "defaultAction": "SCMP_ACT_ERRNO",
@@ -82,33 +82,37 @@ def make_json():
 
         }
 
-    with open("./seccomp.json","w") as file:
+    seccomp_file_name = container_name + "." + "json"
+    with open(seccomp_file_name,"w") as file:
         json.dump(write_seccomp,file,indent=4)
 
     file.close()
     return 0
 
-def perf_buffer(b,container_id):
+def perf_buffer(b,container_id,container_name):
     while 1:
         try:
             b.perf_buffer_poll()
         except KeyboardInterrupt:
-            make_json()
+            make_json(container_name)
             print(len(syscall_list))
             exit()
         if docker_sdk.Container_Running_Inform(container_id) == True:
-            make_json()
-            print(len(syscall_list))
+            make_json(container_name)
             return 0
 
-def run_tracer(container_id,command_list):
+#def run_tracer(container_id,command_list):
+def run_tracer(container_id,container_name):
     target = container_id
     b = BPF(text=bpf_text.replace("TARGET", target))
     b["events"].open_perf_buffer(call_event(b))
-    print("start container syscall trace now")
+    print("runtime syscall trace now")
     with ProcessPoolExecutor(2) as execer:
-        exec_proc.execve_syscall_tracer(target,command_list)
-        execer.submit(perf_buffer(b,container_id))
+        execer.submit(dockerfile.Start_Container_Test(container_id))
+        execer.submit(perf_buffer(b,target,container_name))
+    #with ProcessPoolExecutor(2) as execer:
+        #exec_proc.execve_syscall_tracer(target,command_list)
+        #execer.submit(perf_buffer(b,container_id))
 
 
 

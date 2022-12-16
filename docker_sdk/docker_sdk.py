@@ -15,15 +15,13 @@ def ContainerName_to_ContainerId(container_name):
 def Container_Running_Inform(target):
     client = docker.from_env()
     while 1:
-        try:
-            for c in client.containers.list():
-                container_id = c.attrs['Id']
-                if target == container_id[0:12]:
-                    print(container_id[0:12])
-                    inform_flag = True
-                    return inform_flag
-        except Exception:
-            continue
+        for c in client.containers.list():
+            container_id = c.attrs['Id']
+            if target == container_id[0:12]:
+                print(container_id[0:12])
+                inform_flag = True
+                return inform_flag
+
 
 
 

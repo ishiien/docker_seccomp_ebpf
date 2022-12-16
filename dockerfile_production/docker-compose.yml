@@ -1,9 +1,16 @@
 version: '3'
 
 services:
-  php:
-    container_name: php_production
+  alpine:
+    container_name: alpine_production
+    tty: true
     build: .
+    security_opt:
+      - seccomp:alpine_container.json
+
+  php:
+    image: php:latest
+    container_name: php_production
     tty: true
     security_opt:
-      - seccomp:seccomp.json
+      - seccomp:php_container.json

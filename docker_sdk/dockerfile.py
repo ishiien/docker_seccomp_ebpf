@@ -27,14 +27,27 @@ def Create_Container_Test():
     cmd = ("docker-compose","up","--no-start")
     s = subprocess.run(cmd,cwd="./dockerfile_test")
 
-def Start_Container_Test():
+def Start_Container_Test(container_id):
     # Start Container and Exec container
     print("start container")
-    cmd = ("docker-compose","start")
+    cmd = ("docker","start","%s" % (container_id))
     s = subprocess.run(cmd,cwd="./dockerfile_test")
-    Enter_Container_Test()
+    Enter_Container_Test(container_id)
+
+def Enter_Container_Test(container_id):
+    print("please enter 'exit'")
+    shell = "/bin/bash"
+    cmd = ("docker","exec","-it",container_id,shell)
+    s = subprocess.run(cmd, cwd="./dockerfile_test")
+
+
+def Down_Dockerfile_Test():
+    print("Down Test Container")
+    command = ("docker-compose","down")
+    a = subprocess.run(command,cwd="./dockerfile_test")
 
 def Exec_Dockerfile_Production():
+    print("Now, make container Production")
     command = ("docker-compose", "build", "--no-cache")
     a = subprocess.run(command, cwd='./dockerfile_production')
     cmd = ("docker-compose","up","--no-start")
@@ -42,8 +55,4 @@ def Exec_Dockerfile_Production():
     cmd = ("docker-compose","start")
     c = subprocess.run(cmd, cwd="./dockerfile_production")
 
-def Enter_Container_Test():
-    print("please enter 'exit'")
-    cmd = ("docker-compose", "exec", "php", "/bin/bash")
-    s = subprocess.run(cmd, cwd="./dockerfile_test")
 
