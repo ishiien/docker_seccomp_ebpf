@@ -4,7 +4,7 @@ services:
   alpine:
     container_name: alpine_production
     tty: true
-    build: .
+    build: ./alpine
     security_opt:
       - seccomp:alpine_container.json
 
@@ -12,5 +12,6 @@ services:
     image: php:latest
     container_name: php_production
     tty: true
+    build: ./php
     security_opt:
       - seccomp:php_container.json

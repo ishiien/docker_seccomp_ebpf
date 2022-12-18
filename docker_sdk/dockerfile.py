@@ -11,14 +11,32 @@ def Check_Docker_Compose(container_list):
                 container_list.append(container_name)
         return container_list
 
-def Check_Docker_Compose_CMD(command_list):
-    with open("./dockerfile_test/Dockerfile") as file:
+#def Check_Docker_Compose_CMD(command_list):
+#    with open("./dockerfile_test/Dockerfile") as file:
+#        dockerfs = file.readlines()
+#        for dockerf in dockerfs:
+#            if "CMD" in dockerf:
+#                command = dockerf.replace("CMD", "").strip()
+#                command_list.append(command.replace(",", " ").replace('"', "").replace("[","").replace("]",""))
+#        return command_list
+
+def Check_Exec_Command(container_id,container_name,command_list):
+    directory = "./dockerfile_test/" + container_name + "/cmd.sh"
+    with open(directory) as file:
         dockerfs = file.readlines()
-        for dockerf in dockerfs:
-            if "CMD" in dockerf:
-                command = dockerf.replace("CMD", "").strip()
-                command_list.append(command.replace(",", " ").replace('"', "").replace("[","").replace("]",""))
+        counter = 0
+        for comm in dockerfs:
+            if counter == 0:
+                counter = counter + 1
+                continue
+            if comm == "\n":
+                continue
+
+            command_list_appender = container_id,comm
+            command_list.append(command_list_appender)
+
         return command_list
+
 
 def Create_Container_Test():
     # Create Container Only
@@ -39,7 +57,6 @@ def Enter_Container_Test(container_id):
     shell = "/bin/bash"
     cmd = ("docker","exec","-it",container_id,shell)
     s = subprocess.run(cmd, cwd="./dockerfile_test")
-
 
 def Down_Dockerfile_Test():
     print("Down Test Container")

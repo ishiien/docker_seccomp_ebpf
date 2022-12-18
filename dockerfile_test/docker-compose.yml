@@ -4,9 +4,12 @@ services:
   alpine:
     container_name: alpine_container
     tty: true
-    build: .
+    build: ./alpine_container
 
   php:
     image: php:latest
     container_name: php_container
     tty: true
+    build: ./php_container
+    command: bash -c "ping -c 1 localhost && /bin/bash"
+

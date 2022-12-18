@@ -29,23 +29,14 @@ while list_length > count_length:
             container_id_list.append(container_id)
             count_length = count_length + 1
 
-print("container trace start")
-container_count = 0
+container_name_arg = 0
 for container_id in container_id_list:
-    container_name = container_name_list[container_count]
-    run_trace.run_tracer(container_id,container_name)
-    container_count = container_count + 1
-    print("container trace done","container_id: %s" % (container_id))
+    dockerfile.Check_Exec_Command(container_id,container_name_list[container_name_arg],command_list)
+    container_name_arg = container_name_arg + 1
 
-## json find and move production
-for container_name in container_name_list:
-    main_cmd = "mv"
-    target_file = container_name + "." + "json"
-    target_dir = "./dockerfile_production"
-    a = subprocess.run([main_cmd,target_file,target_dir])
+print(command_list)
 
-dockerfile.Down_Dockerfile_Test()
-dockerfile.Exec_Dockerfile_Production()
+
 
 
 
