@@ -102,7 +102,7 @@ def perf_buffer(b,container_id,container_name):
             return 0
 
 #def run_tracer(container_id,command_list):
-def run_tracer(container_id,container_name):
+def run_tracer(container_id,container_name,command_list):
     target = container_id
     b = BPF(text=bpf_text.replace("TARGET", target))
     b["events"].open_perf_buffer(call_event(b))

@@ -29,11 +29,20 @@ while list_length > count_length:
             container_id_list.append(container_id)
             count_length = count_length + 1
 
+container_name_arg = 0
+for container_id in container_id_list:
+    dockerfile.Check_Exec_Command(container_id,container_name_list[container_name_arg],command_list)
+    container_name_arg = container_name_arg + 1
+
+
 print("container trace start")
 container_count = 0
+
+container_command_list = []
+
 for container_id in container_id_list:
     container_name = container_name_list[container_count]
-    run_trace.run_tracer(container_id,container_name)
+    run_trace.run_tracer(container_id,container_name,command_list)
     container_count = container_count + 1
     print("container trace done","container_id: %s" % (container_id))
 

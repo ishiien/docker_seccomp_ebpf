@@ -5,20 +5,21 @@ import subprocess
 
 # container_list is list of containers to be traced
 container_name_list = []
-command_list = []
+container_command_list = []
+command_list = {}
+get_command_list = {}
+container_id_list = []
 dockerfile.Check_Docker_Compose(container_name_list)
 #dockerfile.Check_Docker_Compose_CMD(command_list)
 
 if not container_name_list:
     print("container id is not set")
     exit(1)
-
 #Create Docker container
 print("container create now")
 dockerfile.Create_Container_Test()
 
 # asynchronous processing
-container_id_list = []
 list_length = len(container_name_list)
 count_length = 0
 container_id = 0
@@ -31,10 +32,12 @@ while list_length > count_length:
 
 container_name_arg = 0
 for container_id in container_id_list:
-    dockerfile.Check_Exec_Command(container_id,container_name_list[container_name_arg],command_list)
+    command_list = dockerfile.Check_Exec_Command(container_id,container_name_list[container_name_arg],get_command_list)
     container_name_arg = container_name_arg + 1
 
-print(command_list)
+
+
+
 
 
 

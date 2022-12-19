@@ -20,7 +20,8 @@ def Check_Docker_Compose(container_list):
 #                command_list.append(command.replace(",", " ").replace('"', "").replace("[","").replace("]",""))
 #        return command_list
 
-def Check_Exec_Command(container_id,container_name,command_list):
+def Check_Exec_Command(container_id,container_name,get_command_list):
+    command = []
     directory = "./dockerfile_test/" + container_name + "/cmd.sh"
     with open(directory) as file:
         dockerfs = file.readlines()
@@ -31,12 +32,10 @@ def Check_Exec_Command(container_id,container_name,command_list):
                 continue
             if comm == "\n":
                 continue
-
-            command_list_appender = container_id,comm
-            command_list.append(command_list_appender)
-
-        return command_list
-
+            comm = comm.replace("\n","")
+            command.append(comm)
+        get_command_list[container_id] = command
+        return get_command_list
 
 def Create_Container_Test():
     # Create Container Only
