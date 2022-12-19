@@ -5,5 +5,5 @@ RUN apt-get -y install iputils-ping net-tools dnsutils
 
 WORKDIR /var/www
 
-CMD bash -c "ping -c 1 localhost && /bin/bash"
+CMD bash -c "/bin/bash"
 

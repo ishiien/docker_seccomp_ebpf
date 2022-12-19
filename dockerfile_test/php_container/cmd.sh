@@ -1,5 +1,4 @@
 #!/bin/sh
 
-ping localhost
-pwd
+ping -c 1 localhost
 

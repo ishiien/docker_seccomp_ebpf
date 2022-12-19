@@ -108,9 +108,7 @@ def run_tracer(container_id,container_name,command_list):
     b["events"].open_perf_buffer(call_event(b))
     print("runtime syscall trace now")
     with ProcessPoolExecutor(2) as execer:
-        execer.submit(dockerfile.Start_Container_Test(container_id))
-    with ProcessPoolExecutor(2) as execer:
-        exec_proc.execve_syscall_tracer(target,command_list)
+        execer.submit(exec_proc.execve_syscall_tracer(target,command_list))
         execer.submit(perf_buffer(b,target,container_name))
 
 

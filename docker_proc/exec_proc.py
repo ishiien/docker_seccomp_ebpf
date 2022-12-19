@@ -124,6 +124,7 @@ def get_print_event(b: BPF, command_list):
     return print_event
 
 def perf_buffer(b):
+    global command_flag
     while command_flag:
         try:
             b.perf_buffer_poll()
@@ -140,9 +141,10 @@ def execve_syscall_tracer(container_id, command_list):
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
     b["execve"].open_perf_buffer(get_print_event(b, command_list))
     print("execve syscal trace start")
+    print(command_list)
 
     with ProcessPoolExecutor(2) as execer:
-        execer.submit(dockerfile.Start_Container_Test())
+        execer.submit(dockerfile.Start_Container_Test(container_id))
         execer.submit(perf_buffer(b))
 
 
