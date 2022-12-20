@@ -9,7 +9,6 @@ services:
       - seccomp:alpine_container.json
 
   php:
-    image: php:latest
     container_name: php_production
     tty: true
     build: ./php

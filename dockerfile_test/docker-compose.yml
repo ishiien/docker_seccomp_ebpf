@@ -7,8 +7,9 @@ services:
     build: ./alpine_container
 
   php:
-    image: php:latest
     container_name: php_container
     tty: true
     build: ./php_container
+
+
 

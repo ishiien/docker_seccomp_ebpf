@@ -49,7 +49,6 @@ def Start_Container_Test(container_id):
     print("start container")
     cmd = ("docker","start","%s" % (container_id))
     s = subprocess.run(cmd,cwd="./dockerfile_test")
-    Enter_Container_Test(container_id)
 
 def Enter_Container_Test(container_id):
     print("please enter 'exit'")
