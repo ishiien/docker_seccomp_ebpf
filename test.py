@@ -1,3 +1,4 @@
+from docker_sdk import dockerfile, docker_sdk
 import sys
 from bcc import BPF
 from bcc.utils import printb
@@ -26,13 +27,14 @@ bpf_text = """
         char comm[TASK_COMM_LEN];
     };
 
-    BPF_PERF_OUTPUT(ends);
     BPF_PERF_OUTPUT(execve);
+    BPF_PERF_OUTPUT(ends);
 
     static inline bool filter(char *str){
         char judge[] = "TARGET";
         char target[sizeof(judge)];
         bpf_probe_read_kernel(&target,sizeof(judge),str);
+        bpf_trace_printk("%d\\n",sizeof(target));
 
         for (int i = 0; i < sizeof(judge); ++i){
             if (target[i] != judge[i])
@@ -115,55 +117,43 @@ out:
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
 
-        if(!filter(uns->name.nodename)){
+        if (!filter(uns->name.nodename)){
             return 0;
         }
 
         ends.perf_submit(args,&data,sizeof(data));
-        return 0;
+        return 0;    
     }
 """
 argv = defaultdict(list)
 
-start_command_pid_list = {}
-
 def execve_print_event(b: BPF):
     def print_event(cpu, data, size):
-        global start_command_pid_list
-        global command_list
         event = b["execve"].event(data)
         if event.type == 0:
             argv[event.pid].append(event.fname)
         elif event.type == 1:
             fname_text = str(b" ".join(argv[event.pid]))
-            for command in command_list:
-                if command in fname_text:
-                    start_command_pid_list[event.pid] = command
+            print("%d %-16s %-16s" % (event.pid,event.comm, fname_text))
     return print_event
+
 
 def ends_print_event(b: BPF):
     def print_event(cpu, data, size):
-        global start_command_pid_list
-        global command_list
         event = b["ends"].event(data)
-        for proc_id in start_command_pid_list:
-            if event.pid == proc_id:
-                command_list.remove(start_command_pid_list[event.pid])
-
     return print_event
 
 
 def perf_buffer(b):
-    global command_list
-    while len(command_list) != 0:
+    while 1:
         try:
             b.perf_buffer_poll()
+            b.trace_print()
         except KeyboardInterrupt:
-            return 0
-    exit()
+            exit()
 
 
-def execve_syscall_tracer(container_id, command_list):
+def execve_syscall_tracer(container_id):
     target = container_id
     arg = "10000"
     b = BPF(text=bpf_text.replace("TARGET", target).replace("MAXARG", arg))
@@ -174,8 +164,7 @@ def execve_syscall_tracer(container_id, command_list):
     print("execve syscal trace start")
     perf_buffer(b)
 
+execve_syscall_tracer("bc9d33944c72")
 
-container_id = "a79d0e172b84"
-command_list = ["apt-get update", "ping localhost"]
-execve_syscall_tracer(container_id, command_list)
+
 
