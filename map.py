@@ -17,19 +17,20 @@ bpf_text = """
 
     struct exec_t {
         u32 pid;
+        int type;
         char comm[TASK_COMM_LEN];
-        char container_id[13];
-        char fname[ARGSIZE];
-        char option[ARGSIZE];
     };
     
+    struct value_t {
+        char fname[ARGSIZE];
+    };
+
     struct data_t {
         u32 pid;
         char comm[TASK_COMM_LEN];
-        char container_id[13];
     };
-
-    BPF_PERF_OUTPUT(execve);
+    
+    BPF_HASH(execve,struct exec_t,struct value_t);
     BPF_PERF_OUTPUT(ends);
 
     static inline bool filter(char *str){
@@ -62,15 +63,23 @@ end:
     return true;
     }
 
-    static int submit_arg(struct pt_regs *ctx, void *fn ,void *ptr, struct exec_t *exec)
+    static int __submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t exec,struct value_t val)
+    {
+        bpf_probe_read_user(val.fname, sizeof(val.fname), ptr);
+        execve.update(&exec,&val);
+        return 1;
+    }
+
+    static int submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t exec,struct value_t val)
     {
         const char *argp = NULL;
         bpf_probe_read_user(&argp, sizeof(argp), ptr);
-        bpf_probe_read_user(exec->option,sizeof(exec->option),argp);
-        bpf_probe_read_user(exec->fname, sizeof(exec->fname), fn);
-        execve.perf_submit(ctx, exec, sizeof(struct exec_t));
+        if (argp) {
+            return __submit_arg(ctx, (void *)(argp), exec,val);
+        }
         return 0;
     }
+    
 
     int syscall__execve(struct pt_regs *ctx,
         const char __user *filename,
@@ -78,6 +87,7 @@ end:
         const char __user *const __user *__envp)
     {
         struct exec_t exec = {0};
+        struct value_t value = {0},*val_;
         exec.pid = bpf_get_current_pid_tgid();
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
@@ -85,52 +95,58 @@ end:
         if(!filter(uns->name.nodename)){
             return 0;
         }
-
-
-        bpf_probe_read_kernel(exec.container_id,sizeof(exec.container_id),uns->name.nodename);
         bpf_get_current_comm(&exec.comm,sizeof(exec.comm));
+        exec.type = 0;        
+        
+        val_ = execve.lookup_or_try_init(&exec,&value);
+        if(val_){
+            struct value_t val = *val_;
+            __submit_arg(ctx, (void *)filename, exec,val);
 
-        for (int i = 1; i < MAXARG; i++) {
-            if (submit_arg(ctx, (void *)filename,(void *)&__argv[i], &exec) == 0)
-                goto out;
+            for (int i = 1; i < MAXARG; i++) {
+                if (submit_arg(ctx, (void *)&__argv[i], exec,val) == 0)
+                    goto out;
+            }
         }
-
 out:        
     return 0;  
     } 
-    
+
+
     TRACEPOINT_PROBE(sched,sched_process_exit){
         struct data_t data = {0};
         data.pid = bpf_get_current_pid_tgid();
         bpf_get_current_comm(&data.comm,sizeof(data.comm));
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        
+
         if (!filter(uns->name.nodename)){
             return 0;
         }
-        
-        bpf_probe_read_kernel(data.container_id,sizeof(data.container_id),uns->name.nodename);
-        
+
         ends.perf_submit(args,&data,sizeof(data));
         return 0;    
     }
 """
+argv = defaultdict(list)
 
-def execve_print_event(b: BPF):
-    def print_event(cpu, data, size):
-        event = b["execve"].event(data)
-        argv[event.pid].append(event.fname)
-        argv[event.pid].append(event.option)
-        fname_text = str(b" ".join(argv[event.pid]))
-        print("%d %-13s %-16s %-16s" % (event.pid,event.comm,event.container_id,fname_text))
-    return print_event
+fname_text = ""
+
+def execve_map_print(exec_map):
+    while True:
+        for k , v in exec_map.items():
+            if k.type == 0:
+                argv[k.pid].append(v.fname)
+            elif k.type == 1:
+                fname_text = str(b" ".join(argv[k.pid]))
+                print("%6d %-16s %-16s" % (k.pid,k.comm,fname_text))
 
 def ends_print_event(b: BPF):
-    def print_event(cpu,data,size):
+    def print_event(cpu, data, size):
         event = b["ends"].event(data)
-        print("%d %-13s %-16s" % (event.pid,event.comm,event.container_id))
+        print("%d %-16s %-16s" % (event.pid, event.comm, fname_text))
     return print_event
+
 
 def perf_buffer(b):
     while 1:
@@ -145,23 +161,16 @@ def execve_syscall_tracer(container_list):
     arg = "10000"
     b = BPF(text=bpf_text.replace("TARGET", target).replace("MAXARG", arg))
     b.attach_kprobe(event=b.get_syscall_fnname("execve"), fn_name="syscall__execve")
-    b["execve"].open_perf_buffer(execve_print_event(b))
     b["ends"].open_perf_buffer(ends_print_event(b))
+    exec_map = b.get_table("execve")
     print("execve syscal trace start")
-    print("%-6s %-13s %-16s %-16s" % ("pid", "container_id", "comm", "filename"))
-    perf_buffer(b)
-
-
-argv = defaultdict(list)
-
-fname_text = ""
-command = ""
-container_id = 0
-proc_id = 0
+    print("%-6s %-6s %-16s" % ("pid", "comm", "argv"))
+    with ProcessPoolExecutor(2) as execer:
+        execer.submit(execve_map_print(exec_map))
+        execer.submit(perf_buffer(b))
 
 container_list = ""
 container_id_list = ["a79d0e172b84", "bc9d33944c72", "3b4b2c1206f3"]
-exec_pid_list = []
 for container in container_id_list:
     container_list = container + container_list
 
