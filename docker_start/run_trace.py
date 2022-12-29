@@ -5,9 +5,8 @@ import subprocess
 import sys
 import json
 from docker_sdk import dockerfile,docker_sdk
-from concurrent.futures import ProcessPoolExecutor
 from docker_proc import exec_proc
-
+from concurrent.futures import ThreadPoolExecutor
 
 bpf_text = """
     #include<linux/sched.h>
@@ -98,18 +97,17 @@ def perf_buffer(b,container_id,container_name):
             print(len(syscall_list))
             exit()
         if docker_sdk.Container_Running_Inform(container_id) == True:
+            dockerfile.Enter_Container_Test(container_id)
             make_json(container_name)
             return 0
 
-#def run_tracer(container_id,command_list):
-def run_tracer(container_id,container_name,command_list):
+def run_tracer(container_id,container_name):
     target = container_id
     b = BPF(text=bpf_text.replace("TARGET", target))
     b["events"].open_perf_buffer(call_event(b))
     print("runtime syscall trace now")
-    with ProcessPoolExecutor(2) as execer:
-        execer.submit(exec_proc.execve_syscall_tracer(target,command_list))
-        execer.submit(perf_buffer(b,target,container_name))
+    with ThreadPoolExecutor(max_workers=2) as execer:
+        execer.submit(dockerfile.Start_Container_Test(container_id))
+        execer.submit(perf_buffer(b,container_id,container_name))
 
-
-
+    return 0

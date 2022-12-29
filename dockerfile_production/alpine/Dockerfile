@@ -9,6 +9,7 @@ RUN groupadd -g ${GID} docker
 RUN useradd -u ${UID} -s /bin/sh tester
 
 WORKDIR /var/www
+COPY index.html /var/www/index.html
 
 CMD bash -c "/bin/bash"
 USER tester

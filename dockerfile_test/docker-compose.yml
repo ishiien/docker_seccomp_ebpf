@@ -5,6 +5,8 @@ services:
     container_name: alpine_container
     tty: true
     build: ./alpine_container
+    ports:
+      - "8080:80"
 
   php:
     container_name: php_container

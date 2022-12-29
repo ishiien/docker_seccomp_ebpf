@@ -1,12 +1,5 @@
-FROM nginx:latest
+FROM  nginx:latest
 
-RUN apt-get update
-RUN apt-get -y install iputils-ping net-tools dnsutils
+ADD default.conf /etc/nginx/conf.d
 
-WORKDIR /var/www
-COPY cmd.sh /var/www/cmd.sh
-RUN chmod +x cmd.sh
-
-CMD bash -c "./cmd.sh && /bin/bash"
-
-
+RUN echo "now building..."

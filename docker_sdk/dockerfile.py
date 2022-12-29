@@ -11,6 +11,15 @@ def Check_Docker_Compose(container_list):
                 container_list.append(container_name)
         return container_list
 
+def Check_Docker_Compose_Production(container_list):
+    with open("./dockerfile_production/docker-compose.yml") as file:
+        dockerfs = file.readlines()
+        for dockerf in dockerfs:
+            if "container_name" in dockerf:
+                container_name = dockerf.replace("container_name:","").strip()
+                container_list.append(container_name)
+        return container_list
+
 #def Check_Docker_Compose_CMD(command_list):
 #    with open("./dockerfile_test/Dockerfile") as file:
 #        dockerfs = file.readlines()
@@ -56,6 +65,11 @@ def Enter_Container_Test(container_id):
     cmd = ("docker","exec","-it",container_id,shell)
     s = subprocess.run(cmd, cwd="./dockerfile_test")
 
+def Stop_Container_Test(container_id):
+    print("stop container")
+    cmd = ("docker", "stop", "%s" % (container_id))
+    s = subprocess.run(cmd, cwd="./dockerfile_test")
+
 def Down_Dockerfile_Test():
     print("Down Test Container")
     command = ("docker-compose","down")
@@ -69,5 +83,6 @@ def Exec_Dockerfile_Production():
     s = subprocess.run(cmd, cwd="./dockerfile_production")
     cmd = ("docker-compose","start")
     c = subprocess.run(cmd, cwd="./dockerfile_production")
+
 
 

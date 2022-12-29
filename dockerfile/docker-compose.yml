@@ -5,11 +5,7 @@ services:
     container_name: alpine_test
     tty: true
     build: ./alpine_container
-
-  php:
-    container_name: php_test
-    tty: true
-    build: ./php_container
-
+    ports:
+      - "8080:80"
 
 

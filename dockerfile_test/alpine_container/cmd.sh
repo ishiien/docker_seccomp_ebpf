@@ -1,3 +1,3 @@
 #!/bin/sh
 
-ls -al
+ping -c 1 localhost

@@ -1,4 +1,4 @@
-FROM nginx:latest
+FROM php:latest
 
 RUN apt-get update
 RUN apt-get -y install iputils-ping net-tools dnsutils
@@ -14,6 +14,5 @@ RUN chmod +x cmd.sh
 
 CMD bash -c "./cmd.sh && /bin/bash"
 USER tester
-
 
 
