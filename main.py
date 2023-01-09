@@ -4,7 +4,7 @@ from docker_proc import exec_proc
 from time import sleep
 import subprocess
 from concurrent.futures import ProcessPoolExecutor
-
+from default_tracer import container_tracer
 
 # container_list is list of containers to be traced
 container_test_name_list = []
@@ -81,7 +81,7 @@ while list_length > count_length:
 container_list = ""
 for container in container_id_list:
     container_list = container + container_list
-#container_tracer.execve_syscall_tracer(container_list)
+container_tracer.execve_syscall_tracer(container_list)
 
 
 
