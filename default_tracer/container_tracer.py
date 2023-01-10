@@ -82,10 +82,10 @@ end:
     {
         struct exec_t exec = {0};
         exec.pid = bpf_get_current_pid_tgid();
-        exec.ppid = task->real_parent->tgid;
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        struct cred *cred = (struct cred *)task->cred
+        exec.ppid = task->real_parent->tgid;
+        struct cred *cred = (struct cred *)task->cred;
         if(!filter(uns->name.nodename)){
             return 0;
         }

@@ -122,7 +122,6 @@ def execve_print_event(b: BPF, command_list):
         elif event.type == 1:
             fname_text = str(b" ".join(fname_argv[event.pid]))
             fname_exit[event.pid].append(fname_text)
-            print("%6d %-16s %-16s %-16s" % (event.pid, event.comm, fname_exit[event.pid],fname_text))
             for command in command_list:
                 if command in fname_text:
                     start_command_pid_list[event.pid] = command

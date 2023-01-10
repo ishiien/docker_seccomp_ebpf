@@ -1,17 +1,11 @@
 version: '3'
 
 services:
-  alpine:
-    container_name: alpine_container
+  nginx:
+    container_name: nginx_container
     tty: true
-    build: ./alpine_container
+    build: ./nginx_container
     ports:
-      - "8080:80"
-
-  php:
-    container_name: php_container
-    tty: true
-    build: ./php_container
-
+      - 80:80
 
 

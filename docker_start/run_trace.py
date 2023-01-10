@@ -68,6 +68,9 @@ def call_event(b: BPF):
     return get_event
 
 def make_json(container_name):
+    syscall_list.append("pread64")
+    syscall_list.append("mkdir")
+    syscall_list.append("chown")
     write_seccomp = \
         {
             "defaultAction": "SCMP_ACT_ERRNO",
@@ -84,7 +87,8 @@ def make_json(container_name):
     seccomp_file_name = container_name + "." + "json"
     with open(seccomp_file_name,"w") as file:
         json.dump(write_seccomp,file,indent=4)
-
+    print("syscall count")
+    print(len(syscall_list))
     file.close()
     return 0
 
