@@ -13,4 +13,4 @@ services:
     tty: true
     build: ./php
     security_opt:
-      - seccomp:php_container.json
+      - seccomp:php.json

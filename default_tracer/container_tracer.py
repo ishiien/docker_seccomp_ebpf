@@ -135,7 +135,9 @@ def execve_print_event(b: BPF):
             fname_argv[event.pid].append(event.fname)
         elif event.type == 1:
             fname_text = str(b" ".join(fname_argv[event.pid]))
-            container_name = docker_sdk.ContainerId_to_ContainerName(event.container_id)
+            container=event.container_id.decode('UTF-8').rstrip()
+            container_name = docker_sdk.ContainerId_to_ContainerName(container)
+            container_name = container_name.replace("/","")
             print("%6d %6d %6d %-16s %-16s %-16s" % (event.pid,event.ppid,event.uid,container_name,event.comm,fname_text))
 
     return print_event
@@ -163,3 +165,5 @@ def execve_syscall_tracer(container_id):
     return 0
 
 command_list = []
+
+
