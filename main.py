@@ -68,7 +68,7 @@ run_tracer.make_json(container_id_list,container_syscall_list)
 for container_name in container_test_name_list:
     main_cmd = "mv"
     target_file = container_name + "." + "json"
-    target_dir = "./dockerfile_production"
+    target_dir = "dockerfile_production"
     a = subprocess.run([main_cmd,target_file,target_dir])
 
 

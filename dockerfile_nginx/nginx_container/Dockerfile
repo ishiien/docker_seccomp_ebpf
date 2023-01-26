@@ -3,9 +3,10 @@ FROM nginx:latest
 RUN apt-get update
 RUN apt-get -y install iputils-ping net-tools dnsutils vim
 
+COPY index.html /usr/share/nginx/html/index.html
+
 WORKDIR /var/www
 COPY cmd.sh /var/www/cmd.sh
-COPY html /var/www/html
 RUN chmod +x cmd.sh
 
-CMD bash -c "./cmd.sh && /bin/bash"
+ENTRYPOINT ["./cmd.sh"]
