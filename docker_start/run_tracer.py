@@ -9,6 +9,7 @@ from docker_proc import exec_proc
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 import os
+from multiprocessing import Process, Pipe
 
 bpf_text = """
     #include<linux/sched.h>
@@ -119,17 +120,20 @@ def make_json(container_id_list,container_syscall_list):
     return 0
 
 
-def perf_buffer(b,container_id):
+def perf_buffer(b,container_id,q):
     global container_sys_list
     container_id_key_list = list(container_sys_list.keys())
-
-    while not docker_sdk.Container_Running_Inform(container_id):
+    #while not docker_sdk.Container_Running_Inform(container_id):
+    while 1:
         try:
-            b.perf_buffer_poll()
-        except Exception:
-            exit()
+            a = q.get()
+            break
+        except:
+            try:
+                b.perf_buffer_poll()
+            except Exception:
+                exit()
 
-    dockerfile.Enter_Container_Test(container_id)
     for k, v in b["events"].items():
         syscall_judged = out_name(k.syscall_number)
         container_id_key = v.container_id.decode('UTF-8').rstrip()
@@ -140,7 +144,7 @@ def perf_buffer(b,container_id):
             container_sys_list[container_id_key].append(syscall_judged)
     return 0
 
-def run_tracer(container_id,container_list,container_syscall_list):
+def run_tracer(q,container_id,container_list,container_syscall_list,conn):
     global container_sys_list
     container_sys_list = container_syscall_list
     target = container_list
@@ -148,8 +152,10 @@ def run_tracer(container_id,container_list,container_syscall_list):
     print("runtime syscall trace now")
     with ThreadPoolExecutor(max_workers=2) as execer:
         execer.submit(dockerfile.Start_Container_Test(container_id))
-        execer.submit(perf_buffer(b,container_id))
-
-    return container_sys_list
+        execer.submit(perf_buffer(b,container_id,q))
+    #perf_buffer(b,container_id,q)
+    print("syscall tracer exit")
+    #return container_sys_list
+    conn.send(container_sys_list)
 
 
