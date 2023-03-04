@@ -12,7 +12,7 @@ def Check_Docker_Compose(container_list):
         return container_list
 
 def Check_Docker_Compose_Production(container_list):
-    with open("./dockerfile_production/docker-compose.yml") as file:
+    with open("./dockerfile_production_php/docker-compose.yml") as file:
         dockerfs = file.readlines()
         for dockerf in dockerfs:
             if "container_name" in dockerf:
@@ -21,7 +21,7 @@ def Check_Docker_Compose_Production(container_list):
         return container_list
 
 #def Check_Docker_Compose_CMD(command_list):
-#    with open("./dockerfile_test/Dockerfile") as file:
+#    with open("./dockerfile_test_php/Dockerfile") as file:
 #        dockerfs = file.readlines()
 #        for dockerf in dockerfs:
 #            if "CMD" in dockerf:

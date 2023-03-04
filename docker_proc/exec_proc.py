@@ -6,6 +6,7 @@ import subprocess
 import json
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
+import queue
 
 bpf_text = """
     #include<linux/sched.h>
@@ -122,7 +123,6 @@ def execve_print_event(b: BPF, command_list):
         elif event.type == 1:
             fname_text = str(b" ".join(fname_argv[event.pid]))
             fname_exit[event.pid].append(fname_text)
-            print("%6d %-16s %-16s %-16s" % (event.pid, event.comm, fname_exit[event.pid],fname_text))
             for command in command_list:
                 if command in fname_text:
                     start_command_pid_list[event.pid] = command
@@ -144,17 +144,21 @@ def ends_print_event(b: BPF):
     return print_event
 
 
-def perf_buffer(b):
+def perf_buffer(b,container_id,q):
+    dockerfile.Start_Container_Test(container_id)
     global command_list
     while len(command_list) != 0:
         try:
             b.perf_buffer_poll()
         except KeyboardInterrupt:
             return 0
+
+    dockerfile.Enter_Container_Test(container_id)
+    q.put(1)
     return 0
 
 
-def execve_syscall_tracer(container_id, container_command_list):
+def execve_syscall_tracer(q,container_id, container_command_list):
     global command_list
     for command in container_command_list:
         command_list.append(command)
@@ -166,12 +170,10 @@ def execve_syscall_tracer(container_id, container_command_list):
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
     b["execve"].open_perf_buffer(execve_print_event(b, command_list))
     b["ends"].open_perf_buffer(ends_print_event(b))
-    print("execve syscal trace start")
+    print("execve syscall trace start")
+    perf_buffer(b,container_id,q)
 
-    with ProcessPoolExecutor(2) as execer:
-        execer.submit(dockerfile.Start_Container_Test(container_id))
-        execer.submit(perf_buffer(b))
-
+    print("execve syscall exit")
     return 0
 
 

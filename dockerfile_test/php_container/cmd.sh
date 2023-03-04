@@ -1,4 +1,6 @@
 #!/bin/sh
 
-ping -c 1 localhost
+ping -c 3 localhost
+nslookup localhost
+php create.php
 

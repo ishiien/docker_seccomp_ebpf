@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+
+  mysql:
+    container_name: mysql_container
+    tty: true
+    build: ./mysql_container
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_DATABASE: database
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+      TZ: 'Asia/Tokyo'
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+     - 3306:3306
+    volumes:
+     - mysql-volume:/var/lib/mysql
+
+  wordpress:
+    container_name: wordpress_container
+    build: ./wordpress_container
+    tty: true
+    stdin_open: true
+    depends_on:
+      - mysql
+    ports:
+      - "80:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: mysql
+      WORDPRESS_DB_PASSWORD: mysql
+      WORDPRESS_DB_NAME: database
+    volumes:
+      - wordpress-volume:/var/www/html
+
+  phpmyadmin:
+    container_name: phpmyadmin_container
+    image: phpmyadmin/phpmyadmin
+    depends_on:
+      - mysql
+    environment:
+      - PMA_HOSTS=mysql
+      - PMA_USER=mysql
+      - PMA_PASSWORD=mysql
+    ports:
+      - "3000:8000"
+
+volumes:
+ mysql-volume:
+ wordpress-volume:
