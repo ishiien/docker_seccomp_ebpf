@@ -7,6 +7,8 @@ from collections import defaultdict
 from docker_sdk import docker_sdk
 from concurrent.futures import ProcessPoolExecutor
 
+# This program traces an execve system call issued by a container in the production environment
+
 bpf_text = """
     #include<linux/sched.h>
     #include<linux/nsproxy.h>
@@ -30,21 +32,21 @@ bpf_text = """
     
     BPF_PERF_OUTPUT(execve);
     
-    static inline bool filter(char *str){
+    static inline bool container_id_filter(char *container_id_str){
         int container_string_length = 13;
-        char container_id_list[] = "TARGET";
-        char target[container_string_length];
+        char container_id_list[] = "TARGET_CONTAINER_ID";
+        char target_container_id[container_string_length];
         int container_count = sizeof(container_id_list) / 12;
         int add_col = 0;
         int loop_count = 0;
         int success_count = 0;
-        bpf_probe_read_kernel(&target,sizeof(target),str);
+        bpf_probe_read_kernel(&target_container_id,sizeof(target_container_id),container_id_str);
         while (loop_count < container_count){
             success_count = 0;
             for (int a = 0 ; a<12 ;++a){
                 if (success_count == 11){
                     goto end;
-                }else if (target[a] != container_id_list[add_col+a]){
+                }else if (target_container_id[a] != container_id_list[add_col+a]){
                     add_col = add_col + 12;
                     if (add_col == sizeof(container_id_list) - 1){
                         return false;
@@ -59,18 +61,18 @@ end:
     return true;
     }
     
-    static int __submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
+    static int save_commands(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
     {
         bpf_probe_read_user(exec->fname, sizeof(exec->fname), ptr);
         execve.perf_submit(ctx, exec, sizeof(struct exec_t));
         return 1;
     }
-    static int submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
+    static int save_argument(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
     {
         const char *argp = NULL;
         bpf_probe_read_user(&argp, sizeof(argp), ptr);
         if (argp) {
-            return __submit_arg(ctx, (void *)(argp), exec);
+            return save_commands(ctx, (void *)(argp), exec);
         }
         return 0;
     }
@@ -86,7 +88,7 @@ end:
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
         exec.ppid = task->real_parent->tgid;
         struct cred *cred = (struct cred *)task->cred;
-        if(!filter(uns->name.nodename)){
+        if(!container_id_filter(uns->name.nodename)){
             return 0;
         }
         
@@ -94,9 +96,9 @@ end:
         exec.type = 0;
         bpf_get_current_comm(&exec.comm,sizeof(exec.comm));
         exec.uid = cred->euid.val;
-        __submit_arg(ctx, (void *)filename, &exec);
+        save_commands(ctx, (void *)filename, &exec);
         for (int i = 1; i < MAXARG; i++) {
-            if (submit_arg(ctx, (void *)&__argv[i], &exec) == 0)
+            if (save_argument(ctx, (void *)&__argv[i], &exec) == 0)
                 goto out;
         }
 out:        
@@ -115,7 +117,7 @@ out:
         exec.type = 1;
         
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        if(!filter(uns->name.nodename)){
+        if(!container_id_filter(uns->name.nodename)){
             return 0;
         }
         bpf_probe_read_kernel(exec.container_id,sizeof(exec.container_id),uns->name.nodename);
@@ -153,9 +155,9 @@ def perf_buffer(b):
 
 
 def execve_syscall_tracer(container_id):
-    target = container_id
+    target_container_id = container_id
     arg = "10000"
-    b = BPF(text=bpf_text.replace("TARGET", target).replace("MAXARG", arg))
+    b = BPF(text=bpf_text.replace("TARGET_CONTAINER_ID", target_container_id).replace("MAXARG", arg))
     b.attach_kprobe(event=b.get_syscall_fnname("execve"), fn_name="syscall__execve")
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
     b["execve"].open_perf_buffer(execve_print_event(b))

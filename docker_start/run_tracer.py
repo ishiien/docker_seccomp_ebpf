@@ -28,21 +28,21 @@ bpf_text = """
 
     BPF_HASH(events,struct key_t,struct value_t);
 
-      static inline bool filter(char *str){
+      static inline bool container_id_filter(char *container_id_str){
         int container_string_length = 13;
-        char container_id_list[] = "TARGET";
-        char target[container_string_length];
+        char container_id_list[] = "TARGET_CONTAINER_ID";
+        char target_container_id[container_string_length];
         int container_count = sizeof(container_id_list) / 12;
         int add_col = 0;
         int loop_count = 0;
         int success_count = 0;
-        bpf_probe_read_kernel(&target,sizeof(target),str);
+        bpf_probe_read_kernel(&target_container_id,sizeof(target_container_id),container_id_str);
         while (loop_count < container_count){
             success_count = 0;
             for (int a = 0 ; a<12 ;++a){
                 if (success_count == 11){
                     goto end;
-                }else if (target[a] != container_id_list[add_col+a]){
+                }else if (target_container_id[a] != container_id_list[add_col+a]){
                     add_col = add_col + 12;
                     if (add_col == sizeof(container_id_list) - 1){
                         return false;
@@ -64,7 +64,7 @@ end:
         key.syscall_number = args->id;
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        if(!filter(uns->name.nodename)){
+        if(!container_id_filter(uns->name.nodename)){
             return 0;
         }
 
@@ -98,6 +98,7 @@ def make_json(container_id_list,container_syscall_list):
 
         seccomp_file_name = container_name + "." + "json"
         print(len(container_syscall_list[container]))
+        # default need
         container_syscall_list[container].append("pread64")
         container_syscall_list[container].append("pwrite64")
 
@@ -123,7 +124,7 @@ def make_json(container_id_list,container_syscall_list):
 def perf_buffer(b,container_id,q):
     global container_sys_list
     container_id_key_list = list(container_sys_list.keys())
-    #while not docker_sdk.Container_Running_Inform(container_id):
+
     while 1:
         try:
             a = q.get()
@@ -147,8 +148,8 @@ def perf_buffer(b,container_id,q):
 def run_tracer(q,container_id,container_list,container_syscall_list,conn):
     global container_sys_list
     container_sys_list = container_syscall_list
-    target = container_list
-    b = BPF(text=bpf_text.replace("TARGET", target))
+    target_container_id = container_list
+    b = BPF(text=bpf_text.replace("TARGET_CONTAINER_ID", target_container_id))
     print("runtime syscall trace now")
     with ThreadPoolExecutor(max_workers=2) as execer:
         execer.submit(dockerfile.Start_Container_Test(container_id))

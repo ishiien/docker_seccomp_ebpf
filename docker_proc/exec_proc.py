@@ -8,49 +8,59 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 import queue
 
+# This program traces execve system calls issued by containers in the test environment
+# and verifies the execution commands and executable programs.
+
 bpf_text = """
     #include<linux/sched.h>
     #include<linux/nsproxy.h>
     #include<linux/ns_common.h>
     #include<linux/utsname.h>
     #define ARGSIZE 128
+    
     struct exec_t {
         u32 pid;
         int type;
         char comm[TASK_COMM_LEN];
         char fname[ARGSIZE];
     };
+    
     struct data_t {
         u32 pid;
         char comm[TASK_COMM_LEN];
     };
+    
     BPF_PERF_OUTPUT(execve);
     BPF_PERF_OUTPUT(ends);
-    static inline bool filter(char *str){
-        char judge[] = "TARGET";
-        char target[sizeof(judge)];
-        bpf_probe_read_kernel(&target,sizeof(judge),str);
+    
+    static inline bool container_id_filter(char *container_id_str){
+        char judge[] = "TARGET_CONTAINER_ID";
+        char target_container_id[sizeof(judge)];
+        bpf_probe_read_kernel(&target_container_id,sizeof(judge),container_id_str);
         for (int i = 0; i < sizeof(judge); ++i){
-            if (target[i] != judge[i])
+            if (target_container_id[i] != judge[i])
                 return false;
         } 
         return true;
     }
-    static int __submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
+    
+    static int save_commands(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
     {
         bpf_probe_read_user(exec->fname, sizeof(exec->fname), ptr);
         execve.perf_submit(ctx, exec, sizeof(struct exec_t));
         return 1;
     }
-    static int submit_arg(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
+    
+    static int save_argument(struct pt_regs *ctx, void *ptr, struct exec_t *exec)
     {
         const char *argp = NULL;
         bpf_probe_read_user(&argp, sizeof(argp), ptr);
         if (argp) {
-            return __submit_arg(ctx, (void *)(argp), exec);
+            return save_commands(ctx, (void *)(argp), exec);
         }
         return 0;
     }
+    
     int syscall__execve(struct pt_regs *ctx,
         const char __user *filename,
         const char __user *const __user *__argv,
@@ -60,14 +70,14 @@ bpf_text = """
         exec.pid = bpf_get_current_pid_tgid();
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        if(!filter(uns->name.nodename)){
+        if(!container_id_filter(uns->name.nodename)){
             return 0;
         }
         exec.type = 0;
         bpf_get_current_comm(&exec.comm,sizeof(exec.comm));
-        __submit_arg(ctx, (void *)filename, &exec);
+        save_commands(ctx, (void *)filename, &exec);
         for (int i = 1; i < MAXARG; i++) {
-            if (submit_arg(ctx, (void *)&__argv[i], &exec) == 0)
+            if (save_argument(ctx, (void *)&__argv[i], &exec) == 0)
                 goto out;
         }
 out:        
@@ -82,7 +92,7 @@ out:
         bpf_get_current_comm(&exec.comm, sizeof(exec.comm));
         exec.type = 1;
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
-        if(!filter(uns->name.nodename)){
+        if(!container_id_filter(uns->name.nodename)){
             return 0;
         }
         execve.perf_submit(ctx, &exec, sizeof(exec));
@@ -96,7 +106,7 @@ out:
         struct task_struct *task = (struct task_struct *)bpf_get_current_task();
         struct uts_namespace *uns = (struct uts_namespace *)task->nsproxy->uts_ns;
 
-        if (!filter(uns->name.nodename)){
+        if (!container_id_filter(uns->name.nodename)){
             return 0;
         }
 
@@ -163,9 +173,9 @@ def execve_syscall_tracer(q,container_id, container_command_list):
     for command in container_command_list:
         command_list.append(command)
     print(command_list)
-    target = container_id
+    target_container_id = container_id
     arg = "10000"
-    b = BPF(text=bpf_text.replace("TARGET", target).replace("MAXARG", arg))
+    b = BPF(text=bpf_text.replace("TARGET_CONTAINER_ID", target_container_id).replace("MAXARG", arg))
     b.attach_kprobe(event=b.get_syscall_fnname("execve"), fn_name="syscall__execve")
     b.attach_kretprobe(event=b.get_syscall_fnname("execve"), fn_name="kretprobe_execve")
     b["execve"].open_perf_buffer(execve_print_event(b, command_list))

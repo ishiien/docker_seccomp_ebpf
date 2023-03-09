@@ -12,22 +12,13 @@ def Check_Docker_Compose(container_list):
         return container_list
 
 def Check_Docker_Compose_Production(container_list):
-    with open("./dockerfile_production_php/docker-compose.yml") as file:
+    with open("./dockerfile_production/docker-compose.yml") as file:
         dockerfs = file.readlines()
         for dockerf in dockerfs:
             if "container_name" in dockerf:
                 container_name = dockerf.replace("container_name:","").strip()
                 container_list.append(container_name)
         return container_list
-
-#def Check_Docker_Compose_CMD(command_list):
-#    with open("./dockerfile_test_php/Dockerfile") as file:
-#        dockerfs = file.readlines()
-#        for dockerf in dockerfs:
-#            if "CMD" in dockerf:
-#                command = dockerf.replace("CMD", "").strip()
-#                command_list.append(command.replace(",", " ").replace('"', "").replace("[","").replace("]",""))
-#        return command_list
 
 def Check_Exec_Command(container_id,container_name,get_command_list):
     command = []
