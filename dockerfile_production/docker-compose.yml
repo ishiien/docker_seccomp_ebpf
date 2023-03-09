@@ -5,7 +5,7 @@ services:
   mysql:
     container_name: mysql_production
     tty: true
-    build: ./mysql
+    build: ./mysql_production
     environment:
       MYSQL_ROOT_PASSWORD: mysql
       MYSQL_DATABASE: database
@@ -16,15 +16,13 @@ services:
     ports:
      - 3306:3306
     security_opt:
-      - seccomp:mysql_container.json
+      - seccomp:mysql_test.json
 
   php:
     container_name: php_production
     tty: true
-    build: ./php
+    build: ./php_production
     depends_on:
       - mysql
     security_opt:
-      - seccomp:php_container.json
-
-
+      - seccomp:php_test.json

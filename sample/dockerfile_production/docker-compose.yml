@@ -15,31 +15,16 @@ services:
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
      - 3306:3306
-    volumes:
-     - mysql-volume:/var/lib/mysql
     security_opt:
       - seccomp:mysql_container.json
 
-
-  wordpress:
-    container_name: wordpress_production
+  php:
+    container_name: php_production
     tty: true
-    build./wordpress_container
+    build: ./php
     depends_on:
       - mysql
-    ports:
-      - "80:80"
-    environment:
-      WORDPRESS_DB_HOST: mysql:3306
-      WORDPRESS_DB_USER: mysql
-      WORDPRESS_DB_PASSWORD: mysql
-      WORDPRESS_DB_NAME: database
     security_opt:
-      - seccomp:wordpress_container.json
-    volumes:
-      - wordpress-volume:/var/www/html
+      - seccomp:php_container.json
 
 
-volumes:
- mysql-volume:
- wordpress-volume:
